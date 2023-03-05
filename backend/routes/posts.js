@@ -2,6 +2,8 @@ const express = require("express");
 const Post = require("../models/post");
 const multer = require("multer");
 
+const checkAuth = require("../middleware/check-auth");
+
 const router = express.Router();
 
 const MIME_TYPR_MAP = {
@@ -28,6 +30,7 @@ const storage = multer.diskStorage({
 
 router.post(
   "",
+  checkAuth,
   multer({ storage: storage }).single("image"),
   async (req, res, next) => {
     const url = req.protocol + "://" + req.get("host");
@@ -51,6 +54,7 @@ router.post(
 
 router.put(
   "/:id",
+  checkAuth,
   multer({ storage: storage }).single("image"),
   async (req, res, next) => {
     try {
@@ -116,7 +120,7 @@ router.get("/:id", async (req, res, next) => {
   }
 });
 
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", checkAuth, async (req, res, next) => {
   try {
     await Post.deleteOne({ _id: req.params.id });
     res.status(200).json({ message: "Post deleted!" });
