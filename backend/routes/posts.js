@@ -40,15 +40,21 @@ router.post(
       imagePath: url + "/images/" + req.file.filename,
     });
 
-    await createdPost.save();
+    try {
+      await createdPost.save();
 
-    res.status(201).json({
-      post: {
-        ...createdPost,
-        id: createdPost._id,
-      },
-      message: "Post added successfully",
-    });
+      res.status(201).json({
+        post: {
+          ...createdPost,
+          id: createdPost._id,
+        },
+        message: "Post added successfully",
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Creating a post failed!",
+      });
+    }
   }
 );
 
@@ -70,10 +76,18 @@ router.put(
         content: req.body.content,
         imagePath: imagePath,
       });
-      await Post.updateOne({ _id: req.params.id }, post);
-      res.status(200).json({ message: "Update successful" });
+      const { modifiedCount } = await Post.updateOne(
+        { _id: req.params.id },
+        post
+      );
+
+      if (modifiedCount && modifiedCount > 0) {
+        res.status(200).json({ message: "Update successful" });
+      } else {
+        res.status(401).json({ message: "Not authorized!" });
+      }
     } catch (error) {
-      res.status(500).json({ message: "Error while updating a post" });
+      res.status(500).json({ message: "Couldn't update post" });
     }
   }
 );
@@ -83,7 +97,6 @@ router.get("", async (req, res, next) => {
   const currentPage = +req.query.page;
 
   let posts = [];
-  let count = null;
 
   try {
     if (pageSize && currentPage) {
@@ -101,7 +114,7 @@ router.get("", async (req, res, next) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: "Server error while fetching posts",
+      message: "Fetching posts failed!",
     });
   }
 });
@@ -116,16 +129,21 @@ router.get("/:id", async (req, res, next) => {
       res.status(404).json({ message: "Post not found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server error while fetching a post" });
+    res.status(500).json({ message: "fetching post failed!" });
   }
 });
 
 router.delete("/:id", checkAuth, async (req, res, next) => {
   try {
     await Post.deleteOne({ _id: req.params.id });
-    res.status(200).json({ message: "Post deleted!" });
+
+    if (matchedCount && matchedCount > 0) {
+      res.status(200).json({ message: "Post deleted!" });
+    } else {
+      res.status(401).json({ message: "Not authorized!" });
+    }
   } catch (error) {
-    res.status(500).json({ message: "Server error while deleting post" });
+    res.status(500).json({ message: "Deleting post failed" });
   }
 });
 
