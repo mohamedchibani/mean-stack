@@ -1,12 +1,12 @@
 const express = require("express");
-const Post = require("../models/post");
 const multer = require("multer");
 
+const Post = require("../models/post");
 const checkAuth = require("../middleware/check-auth");
 
 const router = express.Router();
 
-const MIME_TYPR_MAP = {
+const MIME_TYPE_MAP = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/jpg": "jpg",
@@ -14,7 +14,7 @@ const MIME_TYPR_MAP = {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const isValid = MIME_TYPR_MAP[file.mimetype];
+    const isValid = MIME_TYPE_MAP[file.mimetype];
     let error = new Error("Invalid mime type");
     if (isValid) {
       error = null;
@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const name = file.originalname.toLowerCase().split(" ").join("-");
-    const ext = MIME_TYPR_MAP[file.mimetype];
+    const ext = MIME_TYPE_MAP[file.mimetype];
     cb(null, name + "-" + Date.now() + "." + ext);
   },
 });
@@ -38,6 +38,7 @@ router.post(
       title: req.body.title,
       content: req.body.content,
       imagePath: url + "/images/" + req.file.filename,
+      creator: req.userData.userId,
     });
 
     await createdPost.save();
@@ -69,9 +70,19 @@ router.put(
         title: req.body.title,
         content: req.body.content,
         imagePath: imagePath,
+        creator: req.userData.userId,
       });
-      await Post.updateOne({ _id: req.params.id }, post);
-      res.status(200).json({ message: "Update successful" });
+
+      const { modifiedCount } = await Post.updateOne(
+        { _id: req.params.id, creator: req.userData.userId },
+        post
+      );
+
+      if (modifiedCount && modifiedCount > 0) {
+        res.status(200).json({ message: "Update successful!" });
+      } else {
+        res.status(401).json({ message: "Not authorized!" });
+      }
     } catch (error) {
       res.status(500).json({ message: "Error while updating a post" });
     }
@@ -122,8 +133,12 @@ router.get("/:id", async (req, res, next) => {
 
 router.delete("/:id", checkAuth, async (req, res, next) => {
   try {
-    await Post.deleteOne({ _id: req.params.id });
-    res.status(200).json({ message: "Post deleted!" });
+    const { matchedCount } = await Post.deleteOne({ _id: req.params.id });
+    if (matchedCount && matchedCount > 0) {
+      res.status(200).json({ message: "Deletion successful!" });
+    } else {
+      res.status(401).json({ message: "Not authorized!" });
+    }
   } catch (error) {
     res.status(500).json({ message: "Server error while deleting post" });
   }

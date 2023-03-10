@@ -11,8 +11,8 @@ import { mimeType } from './mime-type.validator';
   styleUrls: ['./post-create.component.css'],
 })
 export class PostCreateComponent implements OnInit {
-  entredTitle = '';
-  entredContent = '';
+  enteredTitle = '';
+  enteredContent = '';
   post: Post;
   isLoading = false;
   form: FormGroup;
@@ -38,7 +38,7 @@ export class PostCreateComponent implements OnInit {
     });
     this.route.paramMap.subscribe((paramMap: ParamMap) => {
       if (paramMap.has('postId')) {
-        this.mode = 'mode';
+        this.mode = 'edit';
         this.postId = paramMap.get('postId');
 
         this.isLoading = true;
@@ -49,6 +49,7 @@ export class PostCreateComponent implements OnInit {
             title: postData.title,
             content: postData.content,
             imagePath: postData.imagePath,
+            creator: postData.creator,
           };
           this.form.setValue({
             title: this.post.title,
